@@ -11,5 +11,8 @@ pub use encode::encode;
 mod reader;
 pub use reader::Base64Encoder;
 
+#[cfg(feature = "bindings")]
+mod bindings;
+
 pub type Result<T> = std::result::Result<T,Cow<'static,str>>;
 
