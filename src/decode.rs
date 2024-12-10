@@ -20,7 +20,7 @@ fn next(chars: &mut Chars<'_>) -> Result<Option<i8>> {
 
 /// Decode a Base64-encoded string
 ///
-/// This function returns a [`Vec<u8>`] with the content of
+/// This function returns a [`Box<[u8]>`] with the content of
 /// the given string.
 ///
 /// The text does not need to be padded with '='
@@ -28,12 +28,13 @@ fn next(chars: &mut Chars<'_>) -> Result<Option<i8>> {
 /// # Example
 /// ```
 /// use rb64::decode;
+/// use std::str;
 ///
 /// let bytes = decode("SGVsbG8gd29ybGQh").unwrap();
-/// let msg = String::from_utf8(bytes).unwrap();
+/// let msg = str::from_utf8(&bytes).unwrap();
 /// assert_eq!(msg, "Hello world!");
 /// ```
-pub fn decode(text: &str) -> Result<Vec<u8>> {
+pub fn decode(text: &str) -> Result<Box<[u8]>> {
     let capacity = text.len() as f64 / 4.0 * 3.0;
     let capacity = capacity.ceil() as usize;
     let mut decoded = Vec::<u8>::with_capacity(capacity);
@@ -70,5 +71,5 @@ pub fn decode(text: &str) -> Result<Vec<u8>> {
         push!(n);
     }
 
-    Ok(decoded)
+    Ok(decoded.into_boxed_slice())
 }
