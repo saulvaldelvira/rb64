@@ -21,6 +21,7 @@ impl Config {
                 "-d" => conf.operation = Operation::Decode,
                 #[cfg(feature = "tui")]
                 "-tui" => conf.operation = Operation::Tui,
+                "-h" | "--help" => help(),
                 _ => conf.files.push(arg),
             }
         }
@@ -31,6 +32,18 @@ impl Config {
     }
     pub fn operation(&self) -> Operation { self.operation }
     pub fn files(&self) -> &[String] { &self.files }
+}
+
+fn help() -> ! {
+    println!("\
+RB64: Base 64 encoder and decoder.
+USAGE: rb64 [-e | -d] [files...]
+OPTIONS:
+    -e   Encode
+    -d   Decode
+
+If no files are given, reads stdin and outputs to stdout");
+    std::process::exit(0);
 }
 
 impl Default for Config {
