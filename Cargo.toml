@@ -1,7 +1,7 @@
 [package]
 name = "rb64"
 description = "Base 64"
-version = "0.1.7"
+version = "0.2.0"
 edition = "2021"
 authors = ["Saúl Valdelvira <saul@saulv.es>"]
 license = "MIT"
