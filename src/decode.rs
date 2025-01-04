@@ -1,5 +1,21 @@
-use std::str::Chars;
+use crate::prelude::{Vec,Box};
+use core::str::Chars;
 use super::Result;
+
+#[cfg(feature = "no-std")]
+macro_rules! ceil {
+    ($n:expr) => {
+        libm::ceil($n)
+    };
+}
+
+#[cfg(not(feature = "no-std"))]
+macro_rules! ceil {
+    ($n:expr) => {
+        $n.ceil()
+    };
+}
+
 use dbg_unreachable::unreachable;
 
 #[inline(always)]
@@ -36,7 +52,7 @@ fn next(chars: &mut Chars<'_>) -> Result<Option<i8>> {
 /// ```
 pub fn decode(text: &str) -> Result<Box<[u8]>> {
     let capacity = text.len() as f64 / 4.0 * 3.0;
-    let capacity = capacity.ceil() as usize;
+    let capacity = ceil!(capacity) as usize;
     let mut decoded = Vec::<u8>::with_capacity(capacity);
     macro_rules! push {
         ($e:expr) => {

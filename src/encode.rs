@@ -1,3 +1,5 @@
+use crate::prelude::String;
+
 use dbg_unreachable::unreachable;
 
 const TABLE: [char; 64] = [

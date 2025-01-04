@@ -11,7 +11,6 @@ pub fn tui_run() -> std::io::Result<()> {
     textarea.set_block(block.clone());
     loop {
         terminal.draw(|frame| {
-
             let layout = Layout::new(Direction::Horizontal, [
                 Constraint::Percentage(50), Constraint::Percentage(50)
             ]).split(frame.area());
