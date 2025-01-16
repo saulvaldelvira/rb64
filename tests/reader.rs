@@ -1,5 +1,6 @@
-use rb64::Base64Encoder;
 use std::io::Read;
+
+use rb64::Base64Encoder;
 
 #[test]
 fn reader() {
@@ -10,8 +11,10 @@ fn reader() {
     let mut out = [0_u8; 5];
     let mut i = 0;
     while let Ok(n) = reader.read(&mut out) {
-        if n == 0 { return; }
-        assert_eq!(&expected.as_bytes()[i..i+n], &out[0..n]);
+        if n == 0 {
+            return;
+        }
+        assert_eq!(&expected.as_bytes()[i..i + n], &out[0..n]);
         i += n;
     }
 }

@@ -1,10 +1,9 @@
-use crate::prelude::Box;
-use core::slice;
-use core::ffi::c_ulonglong;
-use core::ptr;
-use core::{ffi::{c_char, CStr}, mem};
+use core::{
+    ffi::{c_char, c_ulonglong, CStr},
+    mem, ptr, slice,
+};
 
-use crate::{decode, encode};
+use crate::{decode, encode, prelude::Box};
 
 fn ptr_2_box<T>(ptr: *mut T, len: usize) -> Box<[T]> {
     unsafe {
@@ -16,12 +15,11 @@ fn ptr_2_box<T>(ptr: *mut T, len: usize) -> Box<[T]> {
 #[repr(C)]
 pub struct Buffer {
     ptr: *mut u8,
-    len: usize
+    len: usize,
 }
 
 #[no_mangle]
-pub extern "C"
-fn base64_decode(ptr: *const c_char, len: *mut c_ulonglong) -> Buffer {
+pub extern "C" fn base64_decode(ptr: *const c_char, len: *mut c_ulonglong) -> Buffer {
     let cstr = unsafe { CStr::from_ptr(ptr) };
     if let Ok(s) = cstr.to_str() {
         if let Ok(mut d) = decode(s) {
@@ -29,31 +27,28 @@ fn base64_decode(ptr: *const c_char, len: *mut c_ulonglong) -> Buffer {
             let len = d.len();
             let ptr = d.as_mut_ptr();
             mem::forget(d);
-            return Buffer {
-                ptr,
-                len
-            }
+            return Buffer { ptr, len };
         }
     }
     Buffer {
         ptr: ptr::null_mut(),
-        len: 0
+        len: 0,
     }
 }
 
 #[no_mangle]
-pub extern "C"
-fn base64_buffer_free(res: Buffer) {
+pub extern "C" fn base64_buffer_free(res: Buffer) {
     let Buffer { ptr, len } = res;
-    if ptr.is_null() { return }
+    if ptr.is_null() {
+        return;
+    }
 
     let vec = ptr_2_box(ptr, len);
-    mem::drop( vec );
+    mem::drop(vec);
 }
 
 #[no_mangle]
-pub extern "C"
-fn base64_encode(ptr: *mut u8, len: usize) -> Buffer {
+pub extern "C" fn base64_encode(ptr: *mut u8, len: usize) -> Buffer {
     let vec = ptr_2_box(ptr, len);
     let mut result = encode(&vec);
     result.push('\0');
@@ -63,9 +58,5 @@ fn base64_encode(ptr: *mut u8, len: usize) -> Buffer {
     let ptr = result.as_mut_ptr();
     mem::forget(result);
 
-    Buffer {
-        ptr,
-        len
-    }
+    Buffer { ptr, len }
 }
-

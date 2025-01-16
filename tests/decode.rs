@@ -11,7 +11,8 @@ fn hello_world() {
 
 #[test]
 fn padding() {
-    let decoded = decode("VGhpcyBmcmFnbWVudCBoYXMgcGFkZGluZw==").expect("Expected correct decoding");
+    let decoded =
+        decode("VGhpcyBmcmFnbWVudCBoYXMgcGFkZGluZw==").expect("Expected correct decoding");
     let decoded = str::from_utf8(&decoded).expect("Expected valid UTF-8");
     assert_eq!(decoded, "This fragment has padding");
 
@@ -23,7 +24,7 @@ fn padding() {
 #[test]
 fn invalid() {
     match decode("abcñ") {
-        Err(err) => assert_eq!(err,"Unknown character to decode: 'ñ'"),
-        Ok(_) => panic!("Expected Err")
+        Err(err) => assert_eq!(err, "Unknown character to decode: 'ñ'"),
+        Ok(_) => panic!("Expected Err"),
     }
 }

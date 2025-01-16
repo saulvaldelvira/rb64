@@ -8,13 +8,16 @@ use crate::encode::encode_chunk;
 /// output to Base 64.
 pub struct Base64Encoder<T: Read> {
     reader: T,
-    finished: bool
+    finished: bool,
 }
 
 impl<T: Read> Base64Encoder<T> {
     /// Creates a [Base64Encoder] with a given [reader](Read)
     pub fn new(reader: T) -> Self {
-        Self { reader, finished: false }
+        Self {
+            reader,
+            finished: false,
+        }
     }
 }
 
@@ -29,7 +32,7 @@ impl<T: Read> Read for Base64Encoder<T> {
     /// **TODO**: Fix this
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if buf.len() < 4 {
-            return Err(Error::new(ErrorKind::InvalidInput, "Buffer too small"))
+            return Err(Error::new(ErrorKind::InvalidInput, "Buffer too small"));
         }
         let mut group = [0_u8; 3];
         let mut count = 0;

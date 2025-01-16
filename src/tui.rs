@@ -1,5 +1,7 @@
 use ratatui::{
-    crossterm::event::{self, Event, KeyCode, KeyEventKind}, layout::{Constraint, Direction, Layout}, widgets::{Block, Paragraph, Wrap}
+    crossterm::event::{self, Event, KeyCode, KeyEventKind},
+    layout::{Constraint, Direction, Layout},
+    widgets::{Block, Paragraph, Wrap},
 };
 use tui_textarea::TextArea;
 
@@ -12,12 +14,19 @@ pub fn tui_run() -> std::io::Result<()> {
     loop {
         terminal.draw(|frame| {
             let layout = Layout::new(Direction::Horizontal, [
-                Constraint::Percentage(50), Constraint::Percentage(50)
-            ]).split(frame.area());
+                Constraint::Percentage(50),
+                Constraint::Percentage(50),
+            ])
+            .split(frame.area());
             let block = Block::bordered().title("Base64");
             frame.render_widget(block, frame.area());
             frame.render_widget(&textarea, layout[0]);
-            frame.render_widget(Paragraph::new(out.as_str()).wrap(Wrap{trim: false}).block(Block::bordered()), layout[1]);
+            frame.render_widget(
+                Paragraph::new(out.as_str())
+                    .wrap(Wrap { trim: false })
+                    .block(Block::bordered()),
+                layout[1],
+            );
         })?;
         if let Event::Key(key) = event::read()? {
             if key.kind == KeyEventKind::Press {
@@ -31,7 +40,7 @@ pub fn tui_run() -> std::io::Result<()> {
                         }
                         out = rb64::encode(inp.as_bytes());
                     }
-                    _ => {},
+                    _ => {}
                 }
             }
         }

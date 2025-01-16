@@ -1,6 +1,7 @@
-use crate::prelude::{Vec,Box};
 use core::str::Chars;
+
 use super::Result;
+use crate::prelude::{Box, Vec};
 
 #[cfg(feature = "no-std")]
 macro_rules! ceil {
@@ -20,18 +21,21 @@ use dbg_unreachable::unreachable;
 
 #[inline(always)]
 fn next(chars: &mut Chars<'_>) -> Result<Option<i8>> {
-    let Some(c) = chars.next() else { return Ok(None); };
-    let c = c as i8 - match c {
-        'A'..='Z' => 'A' as i8,
-        'a'..='z' => 'a' as i8 - 26,
-        '0'..='9' => '0' as i8 - 52,
-        '+' => '+' as i8 - 62,
-        '/' => '/' as i8 - 63,
-        '=' => return Ok(None),
-        '\r' | '\n' => return next(chars),
-        _ => return Err(format!("Unknown character to decode: '{c}'").into())
+    let Some(c) = chars.next() else {
+        return Ok(None);
     };
-    Ok(Some(c))
+    let mut n = c as i8;
+    n -= match c {
+            'A'..='Z' => 'A' as i8,
+            'a'..='z' => 'a' as i8 - 26,
+            '0'..='9' => '0' as i8 - 52,
+            '+' => '+' as i8 - 62,
+            '/' => '/' as i8 - 63,
+            '=' => return Ok(None),
+            '\r' | '\n' => return next(chars),
+            _ => return Err(format!("Unknown character to decode: '{c}'").into()),
+        };
+    Ok(Some(n))
 }
 
 /// Decode a Base64-encoded string
@@ -75,10 +79,10 @@ pub fn decode(text: &str) -> Result<Box<[u8]>> {
                     Some(c) => n |= c as u32,
                     None => {
                         if i == 1 {
-                            push!( n >> offset );
+                            push!(n >> offset);
                         }
                         break 'main;
-                    },
+                    }
                 }
             }
             push!(n >> offset);

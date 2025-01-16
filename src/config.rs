@@ -2,9 +2,10 @@ use rb64::Result;
 
 #[derive(Clone, Copy)]
 pub enum Operation {
-    Encode, Decode,
+    Encode,
+    Decode,
     #[cfg(feature = "tui")]
-    Tui
+    Tui,
 }
 
 pub struct Config {
@@ -30,19 +31,25 @@ impl Config {
         }
         Ok(conf)
     }
-    pub fn operation(&self) -> Operation { self.operation }
-    pub fn files(&self) -> &[String] { &self.files }
+    pub fn operation(&self) -> Operation {
+        self.operation
+    }
+    pub fn files(&self) -> &[String] {
+        &self.files
+    }
 }
 
 fn help() -> ! {
-    println!("\
+    println!(
+        "\
 RB64: Base 64 encoder and decoder.
 USAGE: rb64 [-e | -d] [files...]
 OPTIONS:
     -e   Encode
     -d   Decode
 
-If no files are given, reads stdin and outputs to stdout");
+If no files are given, reads stdin and outputs to stdout"
+    );
     std::process::exit(0);
 }
 

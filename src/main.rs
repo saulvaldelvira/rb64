@@ -1,19 +1,16 @@
-use std::env;
-use std::fs;
-use std::io::stdin;
-use std::io::stdout;
-use std::io::Read;
-use std::io::Write;
-use std::process;
+use std::{
+    env, fs,
+    io::{stdin, stdout, Read, Write},
+    process,
+};
 
 mod config;
 
 #[cfg(feature = "tui")]
 pub mod tui;
 
-use rb64::decode;
-use rb64::encode;
 use config::Config;
+use rb64::{decode, encode};
 
 use crate::config::Operation;
 
@@ -31,7 +28,6 @@ fn main() -> std::io::Result<()> {
                 } else {
                     stdout().write_all(enc.as_bytes())?;
                 }
-
             }
             if conf.files().is_empty() {
                 let mut data = Vec::new();
@@ -39,7 +35,7 @@ fn main() -> std::io::Result<()> {
                 let enc = encode(&data);
                 stdout().write_all(enc.as_bytes())?;
             }
-        },
+        }
         Operation::Decode => {
             for file in conf.files() {
                 let data = fs::read_to_string(file)?;
@@ -63,7 +59,7 @@ fn main() -> std::io::Result<()> {
                 });
                 stdout().write_all(&dec)?;
             }
-        },
+        }
         #[cfg(feature = "tui")]
         Operation::Tui => {
             return tui::tui_run();

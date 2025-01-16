@@ -8,10 +8,7 @@
 extern crate alloc;
 
 mod prelude {
-    pub use alloc::borrow::Cow;
-    pub use alloc::string::String;
-    pub use alloc::boxed::Box;
-    pub use alloc::vec::Vec;
+    pub use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 }
 use prelude::*;
 
@@ -28,5 +25,4 @@ pub use reader::Base64Encoder;
 #[cfg(feature = "bindings")]
 mod bindings;
 
-pub type Result<T> = core::result::Result<T,Cow<'static,str>>;
-
+pub type Result<T> = core::result::Result<T, Cow<'static, str>>;
