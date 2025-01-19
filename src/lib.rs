@@ -14,13 +14,11 @@ use prelude::*;
 
 mod decode;
 pub use decode::decode;
+
 mod encode;
 pub use encode::encode;
-
 #[cfg(not(feature = "no-std"))]
-mod reader;
-#[cfg(not(feature = "no-std"))]
-pub use reader::Base64Encoder;
+pub use encode::Base64Encoder;
 
 #[cfg(feature = "bindings")]
 mod bindings;

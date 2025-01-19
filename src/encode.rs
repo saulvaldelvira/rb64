@@ -35,7 +35,7 @@ pub fn encode(bytes: &[u8]) -> String {
     result
 }
 
-pub (crate) fn encode_chunk(bytes: &[u8]) -> [char; 4] {
+fn encode_chunk(bytes: &[u8]) -> [char; 4] {
     let mut buf = ['='; 4];
     macro_rules! set {
         ($i:expr, $e:expr) => {
@@ -57,3 +57,72 @@ pub (crate) fn encode_chunk(bytes: &[u8]) -> [char; 4] {
     set!(3, bytes[2]);
     buf
 }
+
+#[cfg(not(feature = "no-std"))]
+#[doc(hidden)]
+mod __encoder {
+    use std::io::{Error, ErrorKind, Read};
+
+    use super::encode_chunk;
+
+    /// This is a Base 64 Encoder Reader
+    ///
+    /// It takes a [reader](Read) and converts it's
+    /// output to Base 64.
+    pub struct Base64Encoder<T: ?Sized + Read> {
+        finished: bool,
+        reader: T,
+    }
+
+    impl<T: Read> Base64Encoder<T> {
+        /// Creates a [Base64Encoder] with a given [reader](Read)
+        pub fn new(reader: T) -> Self {
+            Self {
+                reader,
+                finished: false,
+            }
+        }
+    }
+
+    impl<T: ?Sized + Read> Read for Base64Encoder<T> {
+        /// Read the next chunk of data into buf.
+        ///
+        /// When the reader has finished, returns 0.
+        ///
+        /// If the length of buf is less than 4, this
+        /// function returns an Error.
+        ///
+        /// **TODO**: Fix this
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            if self.finished {
+                return Ok(0);
+            }
+            if buf.len() < 4 {
+                return Err(Error::new(ErrorKind::InvalidInput, "Buffer too small"));
+            }
+            let mut group = [0_u8; 3];
+            let mut count = 0;
+
+            while count < buf.len() / 4 && !self.finished {
+                let n = self.reader.read(&mut group)?;
+                if n == 0 {
+                    self.finished = true;
+                    break;
+                }
+                let chunk = encode_chunk(&group[0..n]);
+                for i in 0..4 {
+                    buf[count + i] = chunk[i] as u8;
+                    if chunk[i] == '=' {
+                        self.finished = true;
+                    }
+                }
+                count += 4;
+            }
+            Ok(count)
+        }
+    }
+}
+
+#[cfg(not(feature = "no-std"))]
+#[doc(inline)]
+pub use __encoder::Base64Encoder;
