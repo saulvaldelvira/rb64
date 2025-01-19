@@ -13,7 +13,7 @@ crate-type = [ "lib", "cdylib", "staticlib" ]
 [dependencies]
 dbg_unreachable = { version = ">=0.1.2" , git = "https://github.com/saulvaldelvira/dbg-unreachable" }
 libm = { version = "0.2.11", optional = true }
-ratatui = { version = "0.28.1", optional = true }
+ratatui = { version = ">=0.28.1", optional = true }
 tui-textarea = { version = ">=0.6.1", optional = true }
 
 [build-dependencies]

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Direction, Layout},
@@ -11,7 +13,7 @@ pub fn tui_run() -> std::io::Result<()> {
     let mut textarea = TextArea::default();
     let block = Block::bordered().title("Base64");
     textarea.set_block(block.clone());
-    loop {
+    'main: loop {
         terminal.draw(|frame| {
             let layout = Layout::new(Direction::Horizontal, [
                 Constraint::Percentage(50),
@@ -28,21 +30,34 @@ pub fn tui_run() -> std::io::Result<()> {
                 layout[1],
             );
         })?;
-        if let Event::Key(key) = event::read()? {
+        let mut must_update = false;
+        while event::poll(Duration::from_secs(0)).unwrap_or(false) {
+            let Event::Key(key) = event::read()? else { continue };
+
+            textarea.input(key);
             if key.kind == KeyEventKind::Press {
-                textarea.input(key);
                 match key.code {
-                    KeyCode::Esc => break,
-                    KeyCode::Enter | KeyCode::Char(_) => {
-                        let mut inp = "".to_string();
-                        for l in textarea.lines() {
-                            inp.push_str(l);
+                    KeyCode::Esc => break 'main,
+                    KeyCode::Delete | KeyCode::Enter
+                    | KeyCode::Backspace | KeyCode::Char(_) => {
+                            must_update = true;
                         }
-                        out = rb64::encode(inp.as_bytes());
-                    }
                     _ => {}
                 }
             }
+        }
+        if must_update {
+            let mut inp = "".to_string();
+            /* TODO: Replace with Iterator::intersperse when stabilized */
+            let mut first = true;
+            for l in textarea.lines() {
+                if !first {
+                    inp.push('\n');
+                }
+                first = false;
+                inp.push_str(l);
+            }
+            out = rb64::encode(inp.as_bytes());
         }
     }
     ratatui::restore();
