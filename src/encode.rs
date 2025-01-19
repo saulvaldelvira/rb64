@@ -35,7 +35,7 @@ pub fn encode(bytes: &[u8]) -> String {
     result
 }
 
-pub(crate) fn encode_chunk(bytes: &[u8]) -> [char; 4] {
+pub (crate) fn encode_chunk(bytes: &[u8]) -> [char; 4] {
     let mut buf = ['='; 4];
     macro_rules! set {
         ($i:expr, $e:expr) => {

@@ -6,9 +6,9 @@ use crate::encode::encode_chunk;
 ///
 /// It takes a [reader](Read) and converts it's
 /// output to Base 64.
-pub struct Base64Encoder<T: Read> {
-    reader: T,
+pub struct Base64Encoder<T: ?Sized + Read> {
     finished: bool,
+    reader: T,
 }
 
 impl<T: Read> Base64Encoder<T> {
@@ -21,7 +21,7 @@ impl<T: Read> Base64Encoder<T> {
     }
 }
 
-impl<T: Read> Read for Base64Encoder<T> {
+impl<T: ?Sized + Read> Read for Base64Encoder<T> {
     /// Read the next chunk of data into buf.
     ///
     /// When the reader has finished, returns 0.
@@ -31,6 +31,9 @@ impl<T: Read> Read for Base64Encoder<T> {
     ///
     /// **TODO**: Fix this
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.finished {
+            return Ok(0);
+        }
         if buf.len() < 4 {
             return Err(Error::new(ErrorKind::InvalidInput, "Buffer too small"));
         }

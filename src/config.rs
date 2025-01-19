@@ -26,9 +26,6 @@ impl Config {
                 _ => conf.files.push(arg),
             }
         }
-        if !conf.files.is_empty() {
-            conf.operation = Operation::Decode;
-        }
         Ok(conf)
     }
     pub fn operation(&self) -> Operation {
@@ -59,7 +56,7 @@ impl Default for Config {
             #[cfg(feature = "tui")]
             operation: Operation::Tui,
             #[cfg(not(feature = "tui"))]
-            operation: Operation::Decode,
+            operation: Operation::Encode,
             files: Vec::new(),
         }
     }
