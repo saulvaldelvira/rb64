@@ -1,4 +1,4 @@
-use dbg_unreachable::unreachable;
+use crate::unreachable;
 
 use crate::prelude::String;
 

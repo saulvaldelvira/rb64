@@ -12,6 +12,22 @@ mod prelude {
 }
 use prelude::*;
 
+#[macro_export]
+#[cfg(debug_assertions)]
+macro_rules! unreachable {
+    ( $($e:expr)? ) => {
+        core::unreachable!($($e)?)
+    };
+}
+
+#[macro_export]
+#[cfg(not(debug_assertions))]
+macro_rules! unreachable {
+    ( $($e:expr)? ) => {
+        unsafe { core::hint::unreachable_unchecked() }
+    };
+}
+
 mod decode;
 pub use decode::decode;
 

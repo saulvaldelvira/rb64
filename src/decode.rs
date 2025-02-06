@@ -17,7 +17,7 @@ macro_rules! ceil {
     };
 }
 
-use dbg_unreachable::unreachable;
+use crate::unreachable;
 
 #[inline(always)]
 fn next(chars: &mut Chars<'_>) -> Result<Option<i8>> {
