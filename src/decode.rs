@@ -3,20 +3,6 @@ use core::str::Chars;
 use super::Result;
 use crate::prelude::{Box, Vec};
 
-#[cfg(feature = "no-std")]
-macro_rules! ceil {
-    ($n:expr) => {
-        libm::ceil($n)
-    };
-}
-
-#[cfg(not(feature = "no-std"))]
-macro_rules! ceil {
-    ($n:expr) => {
-        $n.ceil()
-    };
-}
-
 use crate::unreachable;
 
 #[inline(always)]
@@ -55,8 +41,13 @@ fn next(chars: &mut Chars<'_>) -> Result<Option<i8>> {
 /// assert_eq!(msg, "Hello world!");
 /// ```
 pub fn decode(text: &str) -> Result<Box<[u8]>> {
-    let capacity = text.len() as f64 / 4.0 * 3.0;
-    let capacity = ceil!(capacity) as usize;
+    let len = text.len();
+    if len % 4 != 0 {
+        return Err("Base64 string length must be multiple of 4".into())
+    }
+    let n_padding = text.chars().rev().take(2).filter(|&c| c == '=').count();
+    let capacity = (3 * (len / 4)) - n_padding;
+
     let mut decoded = Vec::<u8>::with_capacity(capacity);
     macro_rules! push {
         ($e:expr) => {

@@ -23,8 +23,16 @@ fn padding() {
 
 #[test]
 fn invalid() {
-    match decode("abcñ") {
-        Err(err) => assert_eq!(err, "Unknown character to decode: 'ñ'"),
+    match decode("abc&") {
+        Err(err) => assert_eq!(err, "Unknown character to decode: '&'"),
+        Ok(_) => panic!("Expected Err"),
+    }
+}
+
+#[test]
+fn short() {
+    match decode("aa") {
+        Err(err) => assert_eq!(err, "Base64 string length must be multiple of 4"),
         Ok(_) => panic!("Expected Err"),
     }
 }
