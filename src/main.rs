@@ -6,16 +6,12 @@ use std::{
     process,
 };
 
-mod config;
-
 #[cfg(feature = "tui")]
 pub mod tui;
 
-use config::Config;
 use rb64::decode;
 use rb64::Base64Encoder;
-
-use crate::config::Operation;
+use rb64::Result;
 
 fn transfer(from: &mut dyn Read, to: &mut dyn Write) -> std::io::Result<()> {
     let mut buf = [0_u8; 2048];
@@ -77,4 +73,66 @@ fn main() -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+#[derive(Clone, Copy)]
+pub enum Operation {
+    Encode,
+    Decode,
+    #[cfg(feature = "tui")]
+    Tui,
+}
+
+pub struct Config {
+    operation: Operation,
+    files: Vec<String>,
+}
+
+impl Config {
+    pub fn parse(args: impl Iterator<Item = String>) -> Result<Self> {
+        let mut conf = Self::default();
+        for arg in args {
+            match arg.as_str() {
+                "-e" => conf.operation = Operation::Encode,
+                "-d" => conf.operation = Operation::Decode,
+                #[cfg(feature = "tui")]
+                "-tui" => conf.operation = Operation::Tui,
+                "-h" | "--help" => help(),
+                _ => conf.files.push(arg),
+            }
+        }
+        Ok(conf)
+    }
+    pub fn operation(&self) -> Operation {
+        self.operation
+    }
+    pub fn files(&self) -> &[String] {
+        &self.files
+    }
+}
+
+fn help() -> ! {
+    println!(
+        "\
+RB64: Base 64 encoder and decoder.
+USAGE: rb64 [-e | -d] [files...]
+OPTIONS:
+    -e   Encode
+    -d   Decode
+
+If no files are given, reads stdin and outputs to stdout"
+    );
+    std::process::exit(0);
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            #[cfg(feature = "tui")]
+            operation: Operation::Tui,
+            #[cfg(not(feature = "tui"))]
+            operation: Operation::Encode,
+            files: Vec::new(),
+        }
+    }
 }
