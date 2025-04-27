@@ -1,5 +1,0 @@
-Tui
-===
-- Ctrl + S: Saves the encoding
-- Add option to toggle between tui encoding and
-  decoding (currently it only encodes)

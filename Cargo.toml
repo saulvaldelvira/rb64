@@ -11,8 +11,7 @@ readme = "README"
 crate-type = [ "lib", "cdylib", "staticlib" ]
 
 [dependencies]
-ratatui = { version = ">=0.28.1", optional = true }
-tui-textarea = { version = ">=0.6.1", optional = true }
+fltk = { version = "1.4", optional = true }
 
 [build-dependencies]
 cbindgen = { version = "0.24.0", optional = true }
@@ -20,6 +19,7 @@ cbindgen = { version = "0.24.0", optional = true }
 [features]
 default = []
 no-std = []
-tui = ["dep:ratatui", "dep:tui-textarea"]
 bindings = ["dep:cbindgen"]
+gui = ["dep:fltk"]
+use-bundled-fltk = ["fltk/fltk-bundled"]
 

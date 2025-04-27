@@ -6,8 +6,8 @@ use std::{
     process,
 };
 
-#[cfg(feature = "tui")]
-pub mod tui;
+#[cfg(feature = "gui")]
+pub mod gui;
 
 use rb64::decode;
 use rb64::Base64Encoder;
@@ -25,51 +25,49 @@ fn transfer(from: &mut dyn Read, to: &mut dyn Write) -> std::io::Result<()> {
 fn main() -> std::io::Result<()> {
     let conf = Config::parse(env::args().skip(1)).unwrap();
 
-    match conf.operation() {
+    match conf.operation {
         Operation::Encode => {
-            for filename in conf.files() {
+            for filename in &conf.files {
                 let file = BufReader::new(File::open(filename)?);
                 let mut encoder = Base64Encoder::new(file);
-                if conf.files().len() > 1 {
+                if conf.files.len() > 1 {
                     let filename = filename.to_owned() + ".base64";
-                    let mut out = BufWriter::new(OpenOptions::new().create(true).truncate(true).open(filename)?);
+                    let out = OpenOptions::new()
+                                          .create(true)
+                                          .truncate(true)
+                                          .open(filename)?;
+                    let mut out = BufWriter::new(out);
                     transfer(&mut encoder, &mut out)?;
                 } else {
                     transfer(&mut encoder, &mut stdout().lock())?;
                 }
             }
-            if conf.files().is_empty() {
+            if conf.files.is_empty() {
                 let mut encoder = Base64Encoder::new(stdin().lock());
                 transfer(&mut encoder, &mut stdout().lock())?;
             }
         }
         Operation::Decode => {
-            for file in conf.files() {
+            for file in &conf.files {
                 let data = fs::read_to_string(file)?;
-                let dec = decode(&data).unwrap_or_else(|err| {
-                    println!("ERROR: {err}");
-                    process::exit(1);
-                });
-                if conf.files().len() > 1 {
+                let dec = decode(&data).unwrap_or_die(1);
+                if conf.files.len() > 1 {
                     let file = file.to_owned() + ".decoded";
                     fs::write(&file, dec)?;
                 } else {
                     stdout().write_all(&dec)?;
                 }
             }
-            if conf.files().is_empty() {
+            if conf.files.is_empty() {
                 let mut data = String::new();
                 stdin().read_to_string(&mut data)?;
-                let dec = decode(&data).unwrap_or_else(|err| {
-                    println!("ERROR: {err}");
-                    process::exit(1);
-                });
+                let dec = decode(&data).unwrap_or_die(1);
                 stdout().write_all(&dec).unwrap();
             }
-        }
-        #[cfg(feature = "tui")]
-        Operation::Tui => {
-            return tui::tui_run();
+        },
+        #[cfg(feature = "gui")]
+        Operation::Gui => {
+            gui::start_gui().unwrap_or_die(2);
         }
     }
     Ok(())
@@ -79,8 +77,8 @@ fn main() -> std::io::Result<()> {
 pub enum Operation {
     Encode,
     Decode,
-    #[cfg(feature = "tui")]
-    Tui,
+    #[cfg(feature = "gui")]
+    Gui,
 }
 
 pub struct Config {
@@ -89,50 +87,73 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn parse(args: impl Iterator<Item = String>) -> Result<Self> {
+    pub fn parse<It, S>(args: It) -> Result<Self>
+    where
+        S: AsRef<str> + Into<String>,
+        It: IntoIterator<Item = S>,
+    {
         let mut conf = Self::default();
-        for arg in args {
-            match arg.as_str() {
+        for arg in args.into_iter() {
+            match arg.as_ref() {
                 "-e" => conf.operation = Operation::Encode,
                 "-d" => conf.operation = Operation::Decode,
-                #[cfg(feature = "tui")]
-                "-tui" => conf.operation = Operation::Tui,
+                #[cfg(feature = "gui")]
+                "-gui" => conf.operation = Operation::Gui,
                 "-h" | "--help" => help(),
-                _ => conf.files.push(arg),
+                _ => conf.files.push(arg.into()),
             }
         }
         Ok(conf)
     }
-    pub fn operation(&self) -> Operation {
-        self.operation
-    }
-    pub fn files(&self) -> &[String] {
-        &self.files
-    }
 }
 
 fn help() -> ! {
-    println!(
-        "\
-RB64: Base 64 encoder and decoder.
-USAGE: rb64 [-e | -d] [files...]
-OPTIONS:
-    -e   Encode
-    -d   Decode
+    #[cfg(not(feature = "gui"))]
+    const SHORTFLAG: &str = "";
+    #[cfg(not(feature = "gui"))]
+    const DESCRIPTION: &str = "";
 
+    #[cfg(feature = "gui")]
+    const SHORTFLAG: &str = " | -gui";
+    #[cfg(feature = "gui")]
+    const DESCRIPTION: &str = "    -gui  Start GUI\n";
+
+    println!("\
+RB64: Base 64 encoder and decoder.
+USAGE: rb64 [-e | -d{SHORTFLAG}] [files...]
+OPTIONS:
+    -e    Encode
+    -d    Decode
+{DESCRIPTION}
 If no files are given, reads stdin and outputs to stdout"
-    );
+);
     std::process::exit(0);
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            #[cfg(feature = "tui")]
-            operation: Operation::Tui,
-            #[cfg(not(feature = "tui"))]
+            #[cfg(feature = "gui")]
+            operation: Operation::Gui,
+            #[cfg(not(feature = "gui"))]
             operation: Operation::Encode,
             files: Vec::new(),
         }
+    }
+}
+
+trait UnwrapOrDie<T> {
+    fn unwrap_or_die(self, ec: i32) -> T;
+}
+
+impl<T, E> UnwrapOrDie<T> for ::core::result::Result<T, E>
+where
+    E: ::core::fmt::Display
+{
+    fn unwrap_or_die(self, ec: i32) -> T {
+        self.unwrap_or_else(|err| {
+            eprintln!("ERROR: {err}");
+            process::exit(ec);
+        })
     }
 }
