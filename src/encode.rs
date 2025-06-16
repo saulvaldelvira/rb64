@@ -94,37 +94,45 @@ mod encoder {
         ///
         /// When the reader has finished, returns 0.
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            let remaining = self.reader.fill_buf()?.len();
-            if remaining == 0 {
-                return Ok(0)
-            }
             let mut count = 0;
-
             while self.offset < 4 {
                 buf[count] = self.chunk[self.offset];
                 self.offset += 1;
                 count += 1;
+                if count == buf.len() {
+                    return Ok(count)
+                }
             }
-            self.offset = 0;
 
             let mut slice = [0; 3];
 
-            while count < buf.len() / 4 {
-                let len = usize::min(3, remaining);
-                let slice = &mut slice[..len];
-                self.reader.read_exact(slice)?;
+            #[inline(always)]
+            fn fill_chunk<R: BufRead + ?Sized>(r: &mut R, slice: &mut [u8; 3]) -> std::io::Result<usize> {
+                let mut len = 0;
+                while len < 3 {
+                    let iter = r.read(&mut slice[len..])?;
+                    len += iter;
+                    if len == 3 || iter == 0 { break }
+                }
+                Ok(len)
+            }
 
-                for c in encode_chunk(slice) {
+            while count < buf.len() / 4 {
+                let len = fill_chunk(&mut self.reader, &mut slice)?;
+                if len == 0 { return Ok(count) }
+
+                let chunk = encode_chunk(&slice[..len]);
+                for c in chunk {
                     buf[count] = c as u8;
                     count += 1;
                 }
-
-                if len < 3 { return Ok(count) }
             }
 
             let rem = buf.len() % 4;
             if rem > 0 {
-                let len = usize::min(3, remaining);
+                let len = fill_chunk(&mut self.reader, &mut slice)?;
+                if len == 0 { return Ok(count) }
+
                 let slice = &mut slice[..len];
                 self.reader.read_exact(slice)?;
 
