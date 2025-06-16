@@ -1,11 +1,12 @@
 [package]
 name = "rb64"
 description = "Base 64"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 authors = ["Saúl Valdelvira <saul@saulv.es>"]
-license = "MIT"
+license = "GPL-3.0-only"
 readme = "README"
+keywords = ["base64", "no_std"]
 
 [lib]
 crate-type = [ "lib", "cdylib", "staticlib" ]
@@ -18,8 +19,8 @@ tui-textarea = { version = ">=0.6.1", optional = true }
 cbindgen = { version = "0.24.0", optional = true }
 
 [features]
-default = []
-no-std = []
+default = ["std"]
+std = []
 tui = ["dep:ratatui", "dep:tui-textarea"]
 bindings = ["dep:cbindgen"]
 

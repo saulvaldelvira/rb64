@@ -1,8 +1,18 @@
 //! Base 64
 //!
 //! This crate contains functions to encode and decode Base 64
+//!
+//! # Example
+//! ```
+//! use rb64::{encode, decode};
+//!
+//! let s = encode(b"Hello world!");
+//! assert_eq!(s, "SGVsbG8gd29ybGQh");
+//! let decoded = decode(&s).unwrap();
+//! assert_eq!(&*decoded, b"Hello world!");
+//! ```
 
-#![cfg_attr(feature = "no-std", no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[macro_use]
 extern crate alloc;
@@ -30,11 +40,11 @@ macro_rules! unreachable {
 
 mod decode;
 pub use decode::decode;
+#[cfg(feature = "std")]
+pub use encode::Base64Encoder;
 
 mod encode;
 pub use encode::encode;
-#[cfg(not(feature = "no-std"))]
-pub use encode::Base64Encoder;
 
 #[cfg(feature = "bindings")]
 mod bindings;

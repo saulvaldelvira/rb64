@@ -58,10 +58,13 @@ fn encode_chunk(bytes: &[u8]) -> [char; 4] {
     buf
 }
 
-#[cfg(not(feature = "no-std"))]
-#[doc(hidden)]
-mod __encoder {
-    use std::io::{Error, ErrorKind, Read};
+#[cfg(feature = "std")]
+#[doc(inline)]
+pub use encoder::Base64Encoder;
+
+#[cfg(feature = "std")]
+mod encoder {
+    use std::io::{BufRead, Read};
 
     use super::encode_chunk;
 
@@ -69,60 +72,73 @@ mod __encoder {
     ///
     /// It takes a [reader](Read) and converts it's
     /// output to Base 64.
-    pub struct Base64Encoder<T: ?Sized + Read> {
-        finished: bool,
+    pub struct Base64Encoder<T: ?Sized + BufRead> {
+        chunk: [u8; 4],
+        offset: usize,
         reader: T,
     }
 
-    impl<T: Read> Base64Encoder<T> {
+    impl<T: BufRead> Base64Encoder<T> {
         /// Creates a [Base64Encoder] with a given [reader](Read)
         pub fn new(reader: T) -> Self {
             Self {
                 reader,
-                finished: false,
+                offset: 4,
+                chunk: [0; 4],
             }
         }
     }
 
-    impl<T: ?Sized + Read> Read for Base64Encoder<T> {
+    impl<T: ?Sized + BufRead> Read for Base64Encoder<T> {
         /// Read the next chunk of data into buf.
         ///
         /// When the reader has finished, returns 0.
-        ///
-        /// If the length of buf is less than 4, this
-        /// function returns an Error.
-        ///
-        /// **TODO**: Fix this
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            if self.finished {
-                return Ok(0);
+            let remaining = self.reader.fill_buf()?.len();
+            if remaining == 0 {
+                return Ok(0)
             }
-            if buf.len() < 4 {
-                return Err(Error::new(ErrorKind::InvalidInput, "Buffer too small"));
-            }
-            let mut group = [0_u8; 3];
             let mut count = 0;
 
-            while count < buf.len() / 4 && !self.finished {
-                let n = self.reader.read(&mut group)?;
-                if n == 0 {
-                    self.finished = true;
-                    break;
-                }
-                let chunk = encode_chunk(&group[0..n]);
-                for i in 0..4 {
-                    buf[count + i] = chunk[i] as u8;
-                    if chunk[i] == '=' {
-                        self.finished = true;
-                    }
-                }
-                count += 4;
+            while self.offset < 4 {
+                buf[count] = self.chunk[self.offset];
+                self.offset += 1;
+                count += 1;
             }
+            self.offset = 0;
+
+            let mut slice = [0; 3];
+
+            while count < buf.len() / 4 {
+                let len = usize::min(3, remaining);
+                let slice = &mut slice[..len];
+                self.reader.read_exact(slice)?;
+
+                for c in encode_chunk(slice) {
+                    buf[count] = c as u8;
+                    count += 1;
+                }
+
+                if len < 3 { return Ok(count) }
+            }
+
+            let rem = buf.len() % 4;
+            if rem > 0 {
+                let len = usize::min(3, remaining);
+                let slice = &mut slice[..len];
+                self.reader.read_exact(slice)?;
+
+                for (i, c) in encode_chunk(slice).iter().enumerate() {
+                    self.chunk[i] = *c as u8;
+                }
+                self.offset = 0;
+                buf[count..(count + rem)].copy_from_slice(&self.chunk[..rem]);
+                self.offset += rem;
+                count += rem;
+            }
+
             Ok(count)
         }
     }
 }
 
-#[cfg(not(feature = "no-std"))]
-#[doc(inline)]
-pub use __encoder::Base64Encoder;
