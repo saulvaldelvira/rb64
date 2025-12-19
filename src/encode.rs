@@ -20,7 +20,7 @@ const TABLE: [char; 64] = [
 /// ```
 pub fn encode(bytes: &[u8]) -> String {
     let mut capacity = (bytes.len() / 3) * 4;
-    if bytes.len() % 3 > 0 {
+    if !bytes.len().is_multiple_of(3) {
         capacity += 4;
     }
     let mut result = String::with_capacity(capacity);
@@ -64,7 +64,7 @@ pub use encoder::Base64Encoder;
 
 #[cfg(feature = "std")]
 mod encoder {
-    use std::io::{BufRead, Read};
+    use std::io::{self, BufRead, Bytes, Read};
 
     use super::encode_chunk;
 
@@ -72,79 +72,70 @@ mod encoder {
     ///
     /// It takes a [reader](Read) and converts it's
     /// output to Base 64.
-    pub struct Base64Encoder<T: ?Sized + BufRead> {
+    pub struct Base64Encoder<T: BufRead> {
         chunk: [u8; 4],
         offset: usize,
-        reader: T,
+        reader: Bytes<T>,
     }
 
     impl<T: BufRead> Base64Encoder<T> {
         /// Creates a [Base64Encoder] with a given [reader](Read)
         pub fn new(reader: T) -> Self {
             Self {
-                reader,
+                reader: reader.bytes(),
                 offset: 4,
                 chunk: [0; 4],
             }
         }
+
+        fn try_read_exact(&mut self, slice: &mut [u8]) -> io::Result<std::result::Result<(), usize>> {
+            let mut num = 0;
+            macro_rules! next {
+                () => {{
+                    num += 1;
+                    let Some(b) = self.reader.next() else {
+                        return Ok(Err(num - 1))
+                    };
+                    b?
+                }};
+            }
+
+            slice[0] = next!();
+            slice[1] = next!();
+            slice[2] = next!();
+
+            Ok(Ok(()))
+        }
     }
 
-    impl<T: ?Sized + BufRead> Read for Base64Encoder<T> {
+    impl<T: BufRead> Read for Base64Encoder<T> {
         /// Read the next chunk of data into buf.
         ///
         /// When the reader has finished, returns 0.
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
             let mut count = 0;
-            while self.offset < 4 {
-                buf[count] = self.chunk[self.offset];
-                self.offset += 1;
-                count += 1;
-                if count == buf.len() {
-                    return Ok(count)
+            'main: while buf.len() - count > 0 {
+                if self.offset == 4 {
+                    let mut slice = [0; 3];
+                    let len = match self.try_read_exact(&mut slice)? {
+                        Ok(()) => 3,
+                        Err(0) => break 'main,
+                        Err(n) => n,
+                    };
+                    for (i, c) in encode_chunk(&slice[..len]).iter().enumerate() {
+                        self.chunk[i] = *c as u8;
+                    }
+                    self.offset = 0;
                 }
-            }
-
-            let mut slice = [0; 3];
-
-            #[inline(always)]
-            fn fill_chunk<R: BufRead + ?Sized>(r: &mut R, slice: &mut [u8; 3]) -> std::io::Result<usize> {
-                let mut len = 0;
-                while len < 3 {
-                    let iter = r.read(&mut slice[len..])?;
-                    len += iter;
-                    if len == 3 || iter == 0 { break }
-                }
-                Ok(len)
-            }
-
-            while count < buf.len() / 4 {
-                let len = fill_chunk(&mut self.reader, &mut slice)?;
-                if len == 0 { return Ok(count) }
-
-                let chunk = encode_chunk(&slice[..len]);
-                for c in chunk {
-                    buf[count] = c as u8;
+                while self.offset < 4 {
+                    buf[count] = self.chunk[self.offset];
+                    self.offset += 1;
                     count += 1;
+                    if count == buf.len() {
+                        break 'main
+                    }
                 }
             }
-
-            let rem = buf.len() % 4;
-            if rem > 0 {
-                let len = fill_chunk(&mut self.reader, &mut slice)?;
-                if len == 0 { return Ok(count) }
-
-                let slice = &mut slice[..len];
-                self.reader.read_exact(slice)?;
-
-                for (i, c) in encode_chunk(slice).iter().enumerate() {
-                    self.chunk[i] = *c as u8;
-                }
-                self.offset = 0;
-                buf[count..(count + rem)].copy_from_slice(&self.chunk[..rem]);
-                self.offset += rem;
-                count += rem;
-            }
-
             Ok(count)
         }
     }

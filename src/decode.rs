@@ -42,7 +42,7 @@ fn next(chars: &mut Chars<'_>) -> Result<Option<i8>> {
 /// ```
 pub fn decode(text: &str) -> Result<Box<[u8]>> {
     let len = text.len();
-    if len % 4 != 0 {
+    if !len.is_multiple_of(4) {
         return Err("Base64 string length must be multiple of 4".into())
     }
     let n_padding = text.chars().rev().take(2).filter(|&c| c == '=').count();
