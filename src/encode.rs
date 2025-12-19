@@ -114,30 +114,54 @@ mod encoder {
         /// When the reader has finished, returns 0.
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
             let mut count = 0;
-            'main: while buf.len() - count > 0 {
-                if self.offset == 4 {
-                    let mut slice = [0; 3];
-                    let len = match self.try_read_exact(&mut slice)? {
-                        Ok(()) => 3,
-                        Err(0) => break 'main,
-                        Err(n) => n,
-                    };
-                    for (i, c) in encode_chunk(&slice[..len]).iter().enumerate() {
-                        self.chunk[i] = *c as u8;
-                    }
-                    self.offset = 0;
-                }
-                while self.offset < 4 {
-                    buf[count] = self.chunk[self.offset];
-                    self.offset += 1;
-                    count += 1;
-                    if count == buf.len() {
-                        break 'main
-                    }
+            while buf.len() - count > 0 {
+                let Some(c) = self.next() else {
+                    break
+                };
+                buf[count] = c?;
+                count += 1;
+                if count == buf.len() {
+                    break
                 }
             }
             Ok(count)
         }
     }
+
+    impl<R: BufRead> Iterator for Base64Encoder<R> {
+        type Item = io::Result<u8>;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.offset == 4 {
+                let mut slice = [0; 3];
+                let len = match self.try_read_exact(&mut slice) {
+                    Ok(n) => n,
+                    Err(err) => return Some(Err(err))
+                };
+                let len = match len {
+                    Ok(()) => 3,
+                    Err(0) => return None,
+                    Err(n) => n,
+                };
+                for (i, c) in encode_chunk(&slice[..len]).iter().enumerate() {
+                    self.chunk[i] = *c as u8;
+                }
+                self.offset = 0;
+            }
+            self.offset += 1;
+            Some(Ok(self.chunk[self.offset - 1]))
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            let (min, max) = self.reader.size_hint();
+            let remaining = 4 - self.offset;
+            (
+                (min / 3) * 4 + remaining,
+                max.map(|m| (m / 3) * 4 + remaining)
+            )
+        }
+    }
+
+    impl<R: BufRead> core::iter::FusedIterator for Base64Encoder<R> {}
 }
 
